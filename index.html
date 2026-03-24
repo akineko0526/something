@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>something</title>
+<style>
+    body{ margin:0; background:#000; overflow:hidden; font-family:sans-serif; }
+    #container{ position:relative; width:100vw; height:100vh; }
+    canvas{ position:absolute; top:0; left:0; }
+    
+    #romantic-text{
+        position:absolute;
+        top: 10vh; 
+        width:100%;
+        text-align:center;
+        color:white;
+        font-size:26px;
+        line-height:1.2;
+        pointer-events:none;
+        z-index:10;
+    }
+    #romantic-text p{ margin:6px 0; text-shadow:0 0 10px rgba(255,192,203,0.8); }
+</style>
+</head>
+<body>
+
+<div id="container">
+    <canvas id="canvas"></canvas>
+    <div id="romantic-text">
+        <p>我喜歡你很久了</p>
+        <p>願意看在這隻可愛的熊熊面子上</p>
+        <p>給我一個跟你交往看看的機會嗎？</p>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const offCanvas = document.createElement("canvas");
+const offCtx = offCanvas.getContext("2d");
+
+function resize() {
+    canvas.width = offCanvas.width = window.innerWidth;
+    canvas.height = offCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+const particles = [];
+const stars = [];
+const hearts = [];
+const roses = [];      // 新增玫瑰陣列
+const sunflowers = []; // 新增向日葵陣列
+
+const bearColor = "#d8a26d";
+const noseColor = "#f5e4d0";
+const faceColor = "#000";
+const rimGlowColor = "#ffe0b2"; 
+
+class Particle {
+    constructor(x, y, color, size) {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.baseX = x;
+        this.baseY = y;
+        this.size = size;
+        this.color = color;
+    }
+    update() {
+        this.x += (this.baseX - this.x) * 0.08;
+        this.y += (this.baseY - this.y) * 0.08;
+    }
+    draw(targetCtx) {
+        targetCtx.fillStyle = this.color;
+        targetCtx.beginPath();
+        targetCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        targetCtx.fill();
+    }
+}
+
+// 保持原本的高密度 step=1.6
+function addCircle(cx, cy, r, color, step = 1.6) {
+    for (let y = -r; y <= r; y += step) {
+        for (let x = -r; x <= r; x += step) {
+            if (x * x + y * y <= r * r) {
+                particles.push(new Particle(canvas.width/2 + cx + x, canvas.height/2 + cy + y, color, 1.4));
+            }
+        }
+    }
+}
+
+function addEllipse(cx, cy, rx, ry, color, step = 1.6) {
+    for (let y = -ry; y <= ry; y += step) {
+        for (let x = -rx; x <= rx; x += step) {
+            if ((x * x) / (rx * rx) + (y * y) / (ry * ry) <= 1) {
+                particles.push(new Particle(canvas.width/2 + cx + x, canvas.height/2 + cy + y, color, 1.4));
+            }
+        }
+    }
+}
+
+// --- 構建熊熊（依據層次添加粒子） ---
+// 1. 身體 (圓潤)
+addCircle(0, 185, 72, bearColor);
+// 2. 腳部 (比例調整：垂直橢圓但長度適中)
+addEllipse(-25, 242, 18, 30, bearColor); 
+addEllipse(25, 242, 18, 30, bearColor);
+// 3. 手部 (纖細一點：rx=25)
+addEllipse(-90, 175, 25, 22, bearColor); 
+addEllipse(90, 175, 25, 22, bearColor);  
+
+// 4. 耳朵
+addCircle(-105, -75, 65, bearColor);
+addCircle(105, -75, 65, bearColor);      
+
+// 5. 頭部
+addCircle(0, 40, 150, bearColor);        
+
+// 6. 鼻子淺色區
+addEllipse(0, 85, 48, 38, noseColor);
+// 7. 眼睛與鼻子 (改回粒子建立，層級最高)
+addCircle(-50, 45, 11, faceColor, 1.2); // 左眼粒子
+addCircle(50, 45, 11, faceColor, 1.2);  // 右眼粒子
+addCircle(0, 75, 9, faceColor, 1.2);    // 鼻子粒子
+
+// 背景
+for(let i=0; i<80; i++) stars.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, size:Math.random()*1.5, speed:Math.random()*0.2});
+for(let i=0; i<45; i++) hearts.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, size:15+Math.random()*20, speed:0.3+Math.random()*0.8});
+// 初始化玫瑰與向日葵
+for(let i=0; i<20; i++) roses.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, size:20+Math.random()*15, speed:0.4+Math.random()*0.8});
+for(let i=0; i<15; i++) sunflowers.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, size:25+Math.random()*15, speed:0.3+Math.random()*0.7});
+
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    offCtx.clearRect(0, 0, offCanvas.width, offCanvas.height);
+
+    // 星星與愛心
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    stars.forEach(s => {
+        s.y += s.speed;
+        if (s.y > canvas.height) s.y = 0;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI*2); ctx.fill();
+    });
+
+    hearts.forEach(h => {
+        h.y -= h.speed;
+        if (h.y < -20) { h.y = canvas.height + 20; h.x = Math.random()*canvas.width; }
+        ctx.font = h.size + "px serif";
+        ctx.fillText("❤️", h.x, h.y);
+    });
+
+    // 繪製玫瑰 (向下飄)
+    roses.forEach(r => {
+        r.y += r.speed;
+        if (r.y > canvas.height + 30) { r.y = -30; r.x = Math.random()*canvas.width; }
+        ctx.font = r.size + "px serif";
+        ctx.fillText("🌹", r.x, r.y);
+    });
+
+    // 繪製向日葵 (向下飄)
+    sunflowers.forEach(s => {
+        s.y += s.speed;
+        if (s.y > canvas.height + 30) { s.y = -30; s.x = Math.random()*canvas.width; }
+        ctx.font = s.size + "px serif";
+        ctx.fillText("🌻", s.x, s.y);
+    });
+
+    // 在離屏畫布畫出整隻熊（包含粒子眼睛）
+    particles.forEach(p => {
+        p.update();
+        p.draw(offCtx);
+    });
+
+    // 主畫布：外圍發光
+    ctx.shadowColor = rimGlowColor;
+    ctx.shadowBlur = 25; 
+    ctx.drawImage(offCanvas, 0, 0);
+
+    // 覆蓋主體（取消內部發光）
+    ctx.shadowBlur = 0;
+    ctx.drawImage(offCanvas, 0, 0);
+
+    requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+</body>
+</html>
